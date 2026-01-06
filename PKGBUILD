@@ -1,3 +1,5 @@
+# Maintainer: DerNoli
+
 pkgname=imac_brightness
 pkgver=1.1
 pkgrel=1
