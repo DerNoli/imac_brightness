@@ -1,5 +1,5 @@
-pkgname=imac_autobrightness
-pkgver=1.1
+pkgname=autobrightness
+pkgver=1.0
 pkgrel=1
 pkgdesc="Automatic screen brightness adjustment using ambient light sensor"
 arch=('any')
@@ -16,10 +16,9 @@ source=(
     'autobrightness.service'
     'autobrightness.conf'
     '90-backlight.rules'
-    'LICENSE'
     'autobrightness.install'
 )
-sha256sums=('SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP')
+sha256sums=('SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP')
 
 prepare() {
     # Ensure Arch-compliant Python shebang
@@ -31,7 +30,4 @@ package() {
     install -Dm644 "$srcdir/autobrightness.service" "$pkgdir/usr/lib/systemd/system/autobrightness.service"
     install -Dm644 "$srcdir/autobrightness.conf" "$pkgdir/etc/autobrightness.conf"
     install -Dm644 "$srcdir/90-backlight.rules" "$pkgdir/etc/udev/rules.d/90-backlight.rules"
-
-    # Install license
-    install -Dm644 "$srcdir/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
