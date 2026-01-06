@@ -1,6 +1,6 @@
 # imac_brightness
 
-An iMac autbrightness daemon for the display, ready to be built as a package in Arch Linux. The script is built and tested on my iMac19,1.
+An iMac autbrightness daemon for the display, ready to be built as a package in Arch Linux. The script is built and tested on my iMac19,1. Adapted to run on CachyOS.
 
 clone the git:
 
