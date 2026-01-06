@@ -13,3 +13,7 @@ cd imac_brightness
 when you are in the directory, just type:
 
 makepkg -si
+
+enable the service with:
+
+sudo systemctl enable --now autobrightness
