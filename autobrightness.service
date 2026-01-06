@@ -7,8 +7,6 @@ Type=simple
 ExecStart=/usr/bin/autobrightness
 Restart=always
 RestartSec=3
-User=nobody
-Group=nobody
 
 [Install]
 WantedBy=multi-user.target
