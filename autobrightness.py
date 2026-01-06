@@ -1,22 +1,22 @@
 #!/usr/bin/env python3
-import subprocess
-import time
 import dbus
 import math
 import glob
 import os
-import sys
 import json
+import time
 from datetime import datetime
 
 CONFIG_PATH = "/etc/autobrightness.conf"
 LOG_PATH = "/var/log/autobrightness.log"
 
-# Defaults (overridden by config)
+# Defaults
 BACKLIGHT_DEVICE = "acpi_video0"
-EMA_ALPHA = 0.2
+EMA_ALPHA = 0.05
 MIN_BRIGHTNESS = 0.25
 MAX_LUX = 500
+ALS_INTERVAL = 0.2         # seconds between ALS reads
+MAX_CHANGE_PER_SEC = 0.15  # max brightness delta per second
 
 
 def log(msg):
@@ -42,14 +42,12 @@ def load_config():
 
 def lux_to_brightness(lux):
     lux = max(1, min(lux, MAX_LUX))
-    brightness = MIN_BRIGHTNESS + (1 - MIN_BRIGHTNESS) * (math.log10(lux) / math.log10(MAX_LUX))
-    return max(MIN_BRIGHTNESS, min(brightness, 1.0))
+    return MIN_BRIGHTNESS + (1 - MIN_BRIGHTNESS) * (math.log10(lux) / math.log10(MAX_LUX))
 
 
 def detect_max_brightness(device):
     try:
-        path = f"/sys/class/backlight/{device}/max_brightness"
-        with open(path, "r") as f:
+        with open(f"/sys/class/backlight/{device}/max_brightness", "r") as f:
             return int(f.read().strip())
     except:
         return 100
@@ -81,8 +79,7 @@ def get_lux_kde():
         for path in glob.glob("/sys/bus/iio/devices/iio:device*/in_illuminance*"):
             if os.path.isfile(path):
                 with open(path, "r") as f:
-                    raw = float(f.read().strip())
-                    return max(1, raw)
+                    return float(f.read().strip())
     except:
         pass
     return None
@@ -106,20 +103,38 @@ def main():
     log(f"Detected max brightness: {max_brightness}")
 
     ema = None
+    target = None
+
+    last_als_time = 0
+    last_time = time.time()
 
     while True:
-        lux = get_lux()
-        target = lux_to_brightness(lux)
+        now = time.time()
+        dt = now - last_time
+        last_time = now
+
+        # Read ALS only every ALS_INTERVAL seconds
+        if now - last_als_time >= ALS_INTERVAL:
+            lux = get_lux()
+            target = lux_to_brightness(lux)
+            last_als_time = now
 
         if ema is None:
             ema = target
-        else:
-            ema = EMA_ALPHA * target + (1 - EMA_ALPHA) * ema
 
-        log(f"lux={lux:.1f} target={target:.2f} ema={ema:.2f}")
+        # EMA smoothing
+        ema = EMA_ALPHA * target + (1 - EMA_ALPHA) * ema
 
+        # Rate limit brightness change per second
+        max_step = MAX_CHANGE_PER_SEC * dt
+        delta = ema - target
+        if abs(delta) > max_step:
+            ema = ema - max_step if delta > 0 else ema + max_step
+
+        # Apply brightness
         set_brightness(BACKLIGHT_DEVICE, max_brightness, ema)
-        time.sleep(2)
+
+        # No sleep → smooth continuous loop
 
 
 if __name__ == "__main__":
