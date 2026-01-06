@@ -1,5 +1,5 @@
-pkgname=autobrightness
-pkgver=1.0
+pkgname=imac_brightness
+pkgver=1.1
 pkgrel=1
 pkgdesc="Automatic screen brightness adjustment using ambient light sensor"
 arch=('any')
