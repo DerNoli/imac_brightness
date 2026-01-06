@@ -1,0 +1,16 @@
+post_install() {
+    echo "Reloading udev rules..."
+    udevadm control --reload-rules
+    udevadm trigger
+
+    echo "Enabling autobrightness.service..."
+    systemctl enable --now autobrightness.service >/dev/null 2>&1 || true
+}
+
+post_upgrade() {
+    systemctl restart autobrightness.service >/dev/null 2>&1 || true
+}
+
+post_remove() {
+    systemctl disable --now autobrightness.service >/dev/null 2>&1 || true
+}
