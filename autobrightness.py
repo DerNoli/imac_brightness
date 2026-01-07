@@ -1,3 +1,5 @@
+# Maintainer DerNoli
+
 #!/usr/bin/python
 import dbus
 import math
@@ -15,8 +17,10 @@ BACKLIGHT_DEVICE = "acpi_video0"
 EMA_ALPHA = 0.05
 MIN_BRIGHTNESS = 0.25
 MAX_LUX = 500
-ALS_INTERVAL = 0.2         # seconds between ALS reads
-MAX_CHANGE_PER_SEC = 0.15  # max brightness delta per second
+ALS_INTERVAL = 0.2
+MAX_CHANGE_PER_SEC = 0.15
+LOOP_SLEEP = 0.05          # <— wichtig: CPU & Kernel entlasten
+MIN_WRITE_DELTA = 0.005    # <— nur schreiben, wenn Änderung > 0.5 %
 
 
 def log(msg):
@@ -104,6 +108,7 @@ def main():
 
     ema = None
     target = None
+    last_written = None
 
     last_als_time = 0
     last_time = time.time()
@@ -131,10 +136,12 @@ def main():
         if abs(delta) > max_step:
             ema = ema - max_step if delta > 0 else ema + max_step
 
-        # Apply brightness
-        set_brightness(BACKLIGHT_DEVICE, max_brightness, ema)
+        # Write only if brightness changed enough
+        if last_written is None or abs(ema - last_written) >= MIN_WRITE_DELTA:
+            set_brightness(BACKLIGHT_DEVICE, max_brightness, ema)
+            last_written = ema
 
-        # No sleep → smooth continuous loop
+        time.sleep(LOOP_SLEEP)  # <— verhindert Kernel-Flood & CPU-Last
 
 
 if __name__ == "__main__":
