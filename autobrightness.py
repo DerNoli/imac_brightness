@@ -17,10 +17,12 @@ BACKLIGHT_DEVICE = "acpi_video0"
 EMA_ALPHA = 0.05
 MIN_BRIGHTNESS = 0.25
 MAX_LUX = 500
-ALS_INTERVAL = 0.2
-MAX_CHANGE_PER_SEC = 0.15
-LOOP_SLEEP = 0.05          # <— wichtig: CPU & Kernel entlasten
-MIN_WRITE_DELTA = 0.005    # <— nur schreiben, wenn Änderung > 0.5 %
+
+ALS_INTERVAL = 0.2          # seconds between ALS reads
+MAX_CHANGE_PER_SEC = 0.15   # max brightness delta per second
+LOOP_SLEEP = 0.05           # CPU + kernel protection
+WRITE_INTERVAL = 0.1        # max 10 writes/sec
+MIN_WRITE_DELTA = 0.02      # only write if change >= 2%
 
 
 def log(msg):
@@ -108,10 +110,11 @@ def main():
 
     ema = None
     target = None
-    last_written = None
 
     last_als_time = 0
     last_time = time.time()
+    last_write_time = 0
+    last_written = None
 
     while True:
         now = time.time()
@@ -127,21 +130,23 @@ def main():
         if ema is None:
             ema = target
 
-        # EMA smoothing
-        ema = EMA_ALPHA * target + (1 - EMA_ALPHA) * ema
-
-        # Rate limit brightness change per second
+        # Correct EMA rate limiting
+        delta = target - ema
         max_step = MAX_CHANGE_PER_SEC * dt
-        delta = ema - target
+
         if abs(delta) > max_step:
-            ema = ema - max_step if delta > 0 else ema + max_step
+            ema += max_step if delta > 0 else -max_step
+        else:
+            ema = target
 
-        # Write only if brightness changed enough
-        if last_written is None or abs(ema - last_written) >= MIN_WRITE_DELTA:
-            set_brightness(BACKLIGHT_DEVICE, max_brightness, ema)
-            last_written = ema
+        # HARD WRITE RATE LIMIT
+        if now - last_write_time >= WRITE_INTERVAL:
+            if last_written is None or abs(ema - last_written) >= MIN_WRITE_DELTA:
+                set_brightness(BACKLIGHT_DEVICE, max_brightness, ema)
+                last_written = ema
+                last_write_time = now
 
-        time.sleep(LOOP_SLEEP)  # <— verhindert Kernel-Flood & CPU-Last
+        time.sleep(LOOP_SLEEP)
 
 
 if __name__ == "__main__":
