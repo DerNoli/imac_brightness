@@ -1,6 +1,4 @@
-# Maintainer DerNoli
-
-#!/usr/bin/python
+#!/usr/bin/python3
 import dbus
 import math
 import glob
